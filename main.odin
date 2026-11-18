@@ -1,6 +1,8 @@
 package main
 
+import "core:fmt"
 import rl "vendor:raylib"
+import "core:math/bits"
 
 square_size :: 100
 piece_atlas_path   :: "./assets/pieces.png"
@@ -44,19 +46,61 @@ piece_texture_rects: [Piece]rl.Rectangle = {
 
 piece_atlas: rl.Texture2D
 
+GameState :: struct {
+    turn_count: int,
+    is_whites_turn: bool,
+    bitboard: [Piece]u64,
+}
+
+initial_game_state :: proc() -> GameState {
+    return GameState{
+        turn_count = 0,
+        is_whites_turn = true,
+        bitboard = {
+            .WhitePawn   = 65280,
+            .WhiteRook   = 129,
+            .WhiteKnight = 66,
+            .WhiteBishop = 36,
+            .WhiteQueen  = 8,
+            .WhiteKing   = 16,
+            .BlackPawn   = 71776119061217280,
+            .BlackRook   = 9295429630892703744,
+            .BlackKnight = 4755801206503243776,
+            .BlackBishop = 2594073385365405696,
+            .BlackQueen  = 576460752303423488,
+            .BlackKing   = 1152921504606846976,
+        },
+        // bitboard = {
+        //     .WhitePawn   = 1 << 8 | 1 << 9 | 1 << 10 | 1 << 11 | 1 << 12 | 1 << 13 | 1 << 14 | 1 << 15,
+        //     .WhiteRook   = 1 << 0 | 1 << 7,
+        //     .WhiteKnight = 1 << 1 | 1 << 6,
+        //     .WhiteBishop = 1 << 2 | 1 << 5,
+        //     .WhiteQueen  = 1 << 3,
+        //     .WhiteKing   = 1 << 4,
+        //     .BlackPawn   = 1 << 48 | 1 << 49 | 1 << 50 | 1 << 51 | 1 << 52 | 1 << 53 | 1 << 54 | 1 << 55,
+        //     .BlackRook   = 1 << 56 | 1 << 63,
+        //     .BlackKnight = 1 << 57 | 1 << 62,
+        //     .BlackBishop = 1 << 58 | 1 << 61,
+        //     .BlackQueen  = 1 << 59,
+        //     .BlackKing   = 1 << 60,
+        // },
+    }
+}
+
 main :: proc() {
     rl.InitWindow(1000, 800, "mechanical turk")
     rl.SetExitKey(.KEY_NULL)
-    rl.SetTargetFPS(60)
+    rl.SetTargetFPS(144)
 
     piece_atlas = rl.LoadTexture(piece_atlas_path)
 
+    board := initial_game_state()
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
         rl.ClearBackground(rl.RAYWHITE)
         
         draw_board(board_light_color, board_dark_color)
-        draw_initial_position()
+        draw_game_state(&board)
 
         rl.EndDrawing()
     }
@@ -78,34 +122,39 @@ draw_board :: proc(light: rl.Color, dark: rl.Color) {
 
 }
 
-draw_piece :: proc(piece: Piece, x: int, y: int) {
+draw_piece :: proc(piece: Piece, row: u8, col: u8) {
+    x := f32(col) * square_size
+    y := f32(7 - row) * square_size
     rl.DrawTextureRec(
         piece_atlas,
         piece_texture_rects[piece],
-        rl.Vector2{f32(x * square_size), f32(y * square_size)},
+        rl.Vector2{x, y},
         rl.WHITE,
     )
 }
 
-draw_initial_position :: proc() {
-    draw_piece(.BlackRook,   0, 0)
-    draw_piece(.BlackKnight, 1, 0)
-    draw_piece(.BlackBishop, 2, 0)
-    draw_piece(.BlackQueen,  3, 0)
-    draw_piece(.BlackKing,   4, 0)
-    draw_piece(.BlackBishop, 5, 0)
-    draw_piece(.BlackKnight, 6, 0)
-    draw_piece(.BlackRook,   7, 0)
-    draw_piece(.WhiteRook,   0, 7)
-    draw_piece(.WhiteKnight, 1, 7)
-    draw_piece(.WhiteBishop, 2, 7)
-    draw_piece(.WhiteQueen,  3, 7)
-    draw_piece(.WhiteKing,   4, 7)
-    draw_piece(.WhiteBishop, 5, 7)
-    draw_piece(.WhiteKnight, 6, 7)
-    draw_piece(.WhiteRook,   7, 7)
-    for i in 0..<8 {
-        draw_piece(.BlackPawn, i, 1)
-        draw_piece(.WhitePawn, i, 6)
+draw_game_state :: proc(gs: ^GameState) {
+    draw_piece_bitboard(gs, .WhitePawn)
+    draw_piece_bitboard(gs, .WhiteRook)
+    draw_piece_bitboard(gs, .WhiteKnight)
+    draw_piece_bitboard(gs, .WhiteBishop)
+    draw_piece_bitboard(gs, .WhiteQueen)
+    draw_piece_bitboard(gs, .WhiteKing)
+    draw_piece_bitboard(gs, .BlackPawn)
+    draw_piece_bitboard(gs, .BlackRook)
+    draw_piece_bitboard(gs, .BlackKnight)
+    draw_piece_bitboard(gs, .BlackBishop)
+    draw_piece_bitboard(gs, .BlackQueen)
+    draw_piece_bitboard(gs, .BlackKing)
+}
+
+draw_piece_bitboard :: proc(gs: ^GameState, piece: Piece) {
+    bitboard := gs.bitboard[piece]
+    for bitboard != 0 {
+        idx := bits.count_trailing_zeros(bitboard)
+        row := u8(idx / 8)
+        col := u8(idx % 8)
+        bitboard &= ~(1 << idx)
+        draw_piece(piece, row, col)
     }
 }
