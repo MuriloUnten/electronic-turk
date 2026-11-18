@@ -99,13 +99,21 @@ main :: proc() {
         mouse_position := rl.GetMousePosition()
         hovered_row := 7 - i32(mouse_position.y / square_size)
         hovered_col := i32(mouse_position.x / square_size)
+        a_square_is_hovered := hovered_row <= 7 && hovered_col <= 7
+        if a_square_is_hovered {
+            square_idx := u64(8 * hovered_row + hovered_col)
+            hovered_piece, a_piece_is_hovered := get_hovered_piece(&board, square_idx)
+            if a_piece_is_hovered {
+                // moves, captures := get_valid_moves(&board, square_idx, hovered_piece)
+            }
+        }
 
         rl.BeginDrawing()
         rl.ClearBackground(rl.RAYWHITE)
         
         draw_board(board_light_color, board_dark_color)
 
-        if hovered_row <= 7 && hovered_col <= 7 {
+        if a_square_is_hovered {
             rl.DrawRectangle(hovered_col * square_size, (7 - hovered_row) * square_size, square_size, square_size, rl.PURPLE)
         }
 
@@ -166,4 +174,53 @@ draw_piece_bitboard :: proc(gs: ^GameState, piece: Piece) {
         bitboard &= ~(1 << idx)
         draw_piece(piece, row, col)
     }
+}
+
+get_hovered_piece :: proc(gs: ^GameState, square_idx: u64) -> (Piece, bool) {
+    for piece in Piece {
+        if (gs.bitboard[piece] & (1 << square_idx)) != 0 {
+            return piece, true
+        }
+    }
+    return .WhitePawn, false
+}
+
+get_valid_moves :: proc(gs: ^GameState, square_idx: u64, piece: Piece) -> (moves: u64, captures: u64) {
+    moves = 0
+    captures = 0
+
+    whites := (
+        gs.bitboard[.WhitePawn]   |
+        gs.bitboard[.WhiteRook]   |
+        gs.bitboard[.WhiteKnight] |
+        gs.bitboard[.WhiteBishop] |
+        gs.bitboard[.WhiteQueen]  |
+        gs.bitboard[.WhiteKing]
+    )
+
+    blacks := (
+        gs.bitboard[.BlackPawn]   |
+        gs.bitboard[.BlackRook]   |
+        gs.bitboard[.BlackKnight] |
+        gs.bitboard[.BlackBishop] |
+        gs.bitboard[.BlackQueen]  |
+        gs.bitboard[.BlackKing]
+    )
+
+    switch piece {
+    case .WhitePawn:
+    case .WhiteRook:
+    case .WhiteKnight:
+    case .WhiteBishop:
+    case .WhiteQueen:
+    case .WhiteKing:
+    case .BlackPawn:
+    case .BlackRook:
+    case .BlackKnight:
+    case .BlackBishop:
+    case .BlackQueen:
+    case .BlackKing:
+    }
+
+    return moves, captures
 }
