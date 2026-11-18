@@ -96,10 +96,19 @@ main :: proc() {
 
     board := initial_game_state()
     for !rl.WindowShouldClose() {
+        mouse_position := rl.GetMousePosition()
+        hovered_row := 7 - i32(mouse_position.y / square_size)
+        hovered_col := i32(mouse_position.x / square_size)
+
         rl.BeginDrawing()
         rl.ClearBackground(rl.RAYWHITE)
         
         draw_board(board_light_color, board_dark_color)
+
+        if hovered_row <= 7 && hovered_col <= 7 {
+            rl.DrawRectangle(hovered_col * square_size, (7 - hovered_row) * square_size, square_size, square_size, rl.PURPLE)
+        }
+
         draw_game_state(&board)
 
         rl.EndDrawing()
